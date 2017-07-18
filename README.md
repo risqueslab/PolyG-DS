@@ -1,4 +1,5 @@
 # CRISPR-DS-Poly_G
+---------------------
 CRISPR-DS with Poly_G data processing pipeline
 
 
@@ -6,13 +7,11 @@ CRISPR-DS with Poly_G data processing pipeline
 see below for dependencies.
 
 # OVERVIEW OF PROCESS
----------------------
 [Remove tags from reads]
 [Align reads with lobSTR]
 [consensus of genotypes by alignment]
 
 # USAGE
----------------------
 python consensus_by_alignment_lobSTR.py --input aligned_bam_file
 
 Default values are indicated with brackets.
@@ -37,7 +36,6 @@ Arguments:
 
 
 # LIST OF DEPENDENCIES 
----------------------
 The following software and packages must be installed on your computer.
 
 Package	Written with version
