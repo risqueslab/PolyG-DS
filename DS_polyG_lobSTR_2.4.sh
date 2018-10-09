@@ -6,6 +6,7 @@
 # By Dana Nachmanson (1)
 # (1) Department of Pathology, University of Washington School of Medicine, Seattle, WA 98195 
 # July 2017
+# Modified by Brendan Kohrn (1)
 # 
 # Creating single stranded and double stranded consensus
 # based on lobSTR alignment of polyG/polyC regions. Can be used 
@@ -23,12 +24,12 @@
 #     3: A fasta reference genome
 
 
-clear
 
 # Stop on any error inside or outside pipeline or on an unassigned variable.
 set -e
 set -o pipefail
 set -u
+set -x
 
 # 1. SET RUN VARIABLES
 minMem=3            # Minimum number of reads to reach consensus
@@ -48,14 +49,13 @@ REGION_BED=/Users/RRisques/Desktop/Duplex_Sequencing/Reference/PolyG/PolyG_20_si
 # Folder names separated by spaces containing R1 and R2 Fastq.gz files named: samplename.seq1.fastq.gz and samplename.seq2.fastq.gz
 # NOTE: This script can use compressed Fastq files, no need to unzip files before running this script
 
-folderList='s3 s4 s5 s6 s11 s66 7 8 9 '
+folderList='s11'
 
 # 4. RUN SCRIPT:
 # From the terminal-
 # >> cd into the directory containing your SAMPLE FOLDERS and a copy of this script
 # >> bash -x DS_polyG_lobSTR.sh > DS_polyG_lobSTR.txt
-
-for elmt in $folderList
+for elmt in ${folderList}
 do	
 	cd ${elmt}
 	
@@ -65,7 +65,7 @@ do
   	
 	#Align fastQ file with lobSTR
 	#Extra parameters can be added in this command and usage found here: http://lobstr.teamerlich.org/usage.html 
- 	lobSTR --p1 ${elmt}.seq1.smi.fq.gz --p2 ${elmt}.seq2.smi.fq.gz -q --rg-sample ${elmt} --index-prefix $ALIGN_REF -o ${elmt}.smi --rg-lib spike_in --gzip
+ 	lobSTR --p1 ${elmt}.seq1.smi.fq.gz --p2 ${elmt}.seq2.smi.fq.gz -q --rg-sample ${elmt} --index-prefix $ALIGN_REF -o ${elmt}.smi --rg-lib spike_in --gzip --multi --mismatch 3
  	
 	#Sort bam file
  	samtools sort ${elmt}.smi.aligned.bam -o ${elmt}.smi.aligned.sorted.bam
@@ -74,8 +74,10 @@ do
  	samtools index ${elmt}.smi.aligned.sorted.bam 
 	
 	# Perform consensus of lobSTR allele calls
-	python $DS_PATH/consensus_by_alignment_lobSTR.2.0.py --input ${elmt}.smi.aligned.sorted.bam --bed $REGION_BED --prefix ${elmt} \
-	--taglen $tagLen --minmem $minMem --mindiff $minDiff --refdiff $refDiff --motif $motif
-
+	python ${DS_PATH}/consensus_by_alignment_lobSTR.2.3.py --input ${elmt}.smi.aligned.sorted.bam --bed ${REGION_BED} --prefix ${elmt} \
+	--taglen ${tagLen} --minmem ${minMem} --mindiff ${minDiff} --motif ${motif} --rawreads
+	
+	python ~/Desktop/Duplex_Sequencing/Programs/PolyG/filterPolyGCalls_v0.1.0.py \
+	-i ${elmt}.lobSTR_DCSReads.txt -p ${elmt}.lobSTR_DCSReads -b -m ${motif} -d 1
 	cd ..
 done
