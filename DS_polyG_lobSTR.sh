@@ -1,5 +1,6 @@
 #!/bin/bash
-# 
+
+
 # DS_polyG_lobSTR.sh
 # Version 0.3.0
 # 
@@ -103,11 +104,55 @@ do
         --rawreads
     
     # Filter polyG calls
+    # Raw
+    python3 ${DS_PATH}/filterPolyGCalls.py \
+        -i ${elmt}.lobSTR_RawReads.txt \
+        -p ${elmt}.lobSTR_RawReads \
+        -b \
+        -m ${motif} \
+        -d 2 
+    # SSCS
+    python3 ${DS_PATH}/filterPolyGCalls.py \
+        -i ${elmt}.lobSTR_SSCSReads.txt \
+        -p ${elmt}.lobSTR_SSCSReads \
+        -b \
+        -m ${motif} \
+        -d 2 
+    # DCS
     python3 ${DS_PATH}/filterPolyGCalls.py \
         -i ${elmt}.lobSTR_DCSReads.txt \
         -p ${elmt}.lobSTR_DCSReads \
         -b \
         -m ${motif} \
         -d 2 
+    
+    # Combine statistics from each filter
+    echo -e "#Call Type\tPolyG\tGood Calls\tTotal Calls\t% Good Calls\tGood Alleles\tTotal Alleles\t% Good Alleles" > ${elmt}.lobSTR_summary_stats.txt
+    firstLine=1
+    while IFS="" read -r myLine || [ -n "$myLine" ]; do
+        if (( "${firstLine}" == "1" )); then
+            firstLine=0
+        else
+            echo -e "Raw\t${myLine}" >> ${elmt}.lobSTR_summary_stats.txt
+        fi
+    done < ${elmt}.lobSTR_RawReads_stats.txt
+    
+    firstLine=1
+    while IFS="" read -r myLine || [ -n "$myLine" ]; do
+        if (( "${firstLine}" == "1" )); then
+            firstLine=0
+        else
+            echo -e "SSCS\t${myLine}" >> ${elmt}.lobSTR_summary_stats.txt
+        fi
+    done < ${elmt}.lobSTR_SSCSReads_stats.txt
+    
+    firstLine=1
+    while IFS="" read -r myLine || [ -n "$myLine" ]; do
+        if (( "${firstLine}" == "1" )); then
+            firstLine=0
+        else
+            echo -e "DCS\t${myLine}" >> ${elmt}.lobSTR_summary_stats.txt
+        fi
+    done < ${elmt}.lobSTR_DCSReads_stats.txt
     cd ..
 done
