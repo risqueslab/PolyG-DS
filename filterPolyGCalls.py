@@ -106,7 +106,10 @@ def main():
     totCount = 0
     goodLines = []
     goodCounts = []
-    statsFile.write("#PolyG\tGood Calls\tTotal Calls\t% Good Calls\n")
+    totLines = 0
+    statsFile.write(f"#PolyG\tGood Calls\tTotal Calls\t% Good Calls\t"
+                    f"Good Alleles\tTotal Alleles\t% Good Alleles\n"
+                    )
     # Find first line:
     firstLine = inFile.readline()
     while firstLine[0] == "#":
@@ -127,10 +130,10 @@ def main():
                   ):
         goodLines.append('\t'.join(firstLine.split()[:4]))
         goodCounts.append(float(firstLine.split()[3]))
-        totCount += float(firstLine.split()[3])
     else:
         badOutFile.write(firstLine)
-        totCount += float(firstLine.split()[3])
+    totCount += float(firstLine.split()[3])
+    totLines += 1
 
     # Start iterating:
     for line in inFile:
@@ -142,27 +145,43 @@ def main():
             if goodAllele(linebins[1], o.maxDiff, badNts):
                 goodLines.append('\t'.join(linebins[:4]))
                 goodCounts.append(float(linebins[3]))
-                totCount += float(linebins[3])
             else:
                 badOutFile.write(line)
-                totCount += float(linebins[3])
+            totCount += float(linebins[3])
+            totLines += 1
         else:
             # Handle output for current polyG
             totalCounts = sum(goodCounts)
             for x in range(len(goodLines)):
+                if totalCounts == 0:
+                    percGood = 0
+                else:
+                    percGood = (goodCounts[x]/totalCounts)
                 outFile.write(f"{goodLines[x]}\t"
-                              f"{(goodCounts[x]/totalCounts):.4f}\n"
+                              f"{percGood:.4f}\n"
                               )
             
+            if totCount == 0:
+                percGood = 0
+            else:
+                percGood = totalCounts/totCount
+            if totLines == 0:
+                goodAlleles = 0
+            else:
+                goodAlleles = len(goodLines)/totLines
             statsFile.write(f"{currPolyG}\t"
                             f"{totalCounts}\t"
                             f"{totCount}\t"
-                            f"{(totalCounts/totCount):.4f}\n"
+                            f"{percGood:.4f}\t"
+                            f"{len(goodLines)}\t"
+                            f"{totLines}\t"
+                            f"{goodAlleles:.4f}\n"
                             )
             # Reset storage:
             totCount = 0
             goodLines = []
             goodCounts = []
+            totLines = 0
             
             # Process new first line:
             currPolyG = line.split()[0]
@@ -172,21 +191,36 @@ def main():
                           ):
                 goodLines.append('\t'.join(line.split()[:4]))
                 goodCounts.append(float(line.split()[3]))
-                totCount += float(line.split()[3])
             else:
                 badOutFile.write(line)
-                totCount += float(line.split()[3])
+            totCount += float(line.split()[3])
+            totLines += 1
     # Handle output for final polyG
     totalCounts = sum(goodCounts)
     for x in range(len(goodLines)):
+        if totalCounts == 0:
+            percGood = 0
+        else:
+            percGood = (goodCounts[x]/totalCounts)
         outFile.write(f"{goodLines[x]}\t"
-                      f"{(goodCounts[x]/totalCounts):.4f}\n"
-                      )
-    
+                      f"{percGood:.4f}\n"
+                        )
+            
+    if totCount == 0:
+        percGood = 0
+    else:
+        percGood = totalCounts/totCount
+    if totLines == 0:
+        goodAlleles = 0
+    else:
+        goodAlleles = len(goodLines)/totLines
     statsFile.write(f"{currPolyG}\t"
                     f"{totalCounts}\t"
                     f"{totCount}\t"
-                    f"{(totalCounts/totCount):.4f}\n"
+                    f"{percGood:.4f}\t"
+                    f"{len(goodLines)}\t"
+                    f"{totLines}\t"
+                    f"{goodAlleles:.4f}\n"
                     )
 
 
