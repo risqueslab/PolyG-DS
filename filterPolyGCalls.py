@@ -106,20 +106,24 @@ def main():
     totCount = 0
     goodLines = []
     goodCounts = []
-    statsFile.write("PolyG\tGood Calls\tTotal Calls\t% Good Calls\n")
+    statsFile.write("#PolyG\tGood Calls\tTotal Calls\t% Good Calls\n")
     # Find first line:
     firstLine = inFile.readline()
     while firstLine[0] == "#":
-        outFile.write(firstLine)
-        badOutFile.write(firstLine)
+        if len(firstLine.split()) >= 4:
+            outFile.write('\t'.join(firstLine.strip().split()[:4]))
+            outFile.write('\tAllele_Freq\n')
+            badOutFile.write(firstLine)
+        else:
+            outFile.write(firstLine)
+            badOutFile.write(firstLine)
         firstLine = inFile.readline()
 
     # Process first line: 
     currPolyG = firstLine.split()[0]
     if goodAllele(firstLine.split()[1], 
                   o.maxDiff, 
-                  badNts, 
-                  o.bufferSize
+                  badNts
                   ):
         goodLines.append('\t'.join(firstLine.split()[:4]))
         goodCounts.append(float(firstLine.split()[3]))
@@ -164,8 +168,7 @@ def main():
             currPolyG = line.split()[0]
             if goodAllele(line.split()[1], 
                           o.maxDiff, 
-                          badNts, 
-                          o.bufferSize
+                          badNts
                           ):
                 goodLines.append('\t'.join(line.split()[:4]))
                 goodCounts.append(float(line.split()[3]))
