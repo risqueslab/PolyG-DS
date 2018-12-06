@@ -348,8 +348,8 @@ def writeOutputFile(ref_dict, prefix, read_type):
     out_file = open(f"{prefix}.{read_type}Reads.txt", 'w')
     # Write header for file
     if read_type == "lobSTR_Raw":
-        out_file.write(f"#PolyG\tAllele\tAllele_Length\tXD\t"
-                       f"{read_type}_Reads\tAllele_Freq\tSequence\n"
+        out_file.write(f"#PolyG\tAllele\tAllele_Length\t"
+                       f"{read_type}_Reads\tAllele_Freq\tXD\tSequence\n"
                        )
     else:
         out_file.write(f"#PolyG\tAllele\tAllele_Length\t"
@@ -370,9 +370,9 @@ def writeOutputFile(ref_dict, prefix, read_type):
                             f"{polyG}\t"
                             f"{allele}\t"
                             f"{ref_dict[polyG][allele]['len']}\t"
-                            f"{ref_dict[polyG][allele]['XD']}\t"
                             f"{ref_dict[polyG][allele]['count']}\t"
                             f"{rounded_allele_freq}\t"
+                            f"{ref_dict[polyG][allele]['XD']}\t"
                             f"{ref_dict[polyG][allele]['read']}\n"
                             )
                     else:
