@@ -401,8 +401,13 @@ def main():
                              f'{goodreads}\t'
                              f'{sscs_count}\t'
                              f'{dcs_count}\t'
-                             f'{float(sscs_count)/float(dcs_count)}\n'
                              )
+        if dcs_count == 0:
+            read_data_file.write(f'0\n')
+        else:                     
+            read_data_file.write(
+                f'{float(sscs_count)/float(dcs_count)}\n'
+                )
         read_data_file.close()
 
         try:
