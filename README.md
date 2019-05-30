@@ -28,6 +28,7 @@ full functionality of the pipeline.
 When you first download this set of scripts, go to DS_polyG_lobSTR.sh 
 and change the following variables.  Make sure there are no spaces 
 around the equals sign after editing.  
+
 |Variable     |Line #|Value
 |-------------|------|------------
 |DS_PATH      |37    |Path to your directory with these scripts.
@@ -36,6 +37,7 @@ around the equals sign after editing.
 
 ## BED FILE PREPERATION
 The bed file used in this pipeline has the following columns:
+
 |Column    |Description
 |----------|------------------
 |chrom     |The chromosome containing the polyG
@@ -95,7 +97,8 @@ The pipeline can be run by calling `bash DS_polyG_lobSTR.sh RUN_ID_config.sh` wh
 which would take a list of directories you want to process as input.
 
 ### FINAL OUTPUTS:
-For each sample, this pipeline generates a number of output files, described below.  
+For each sample, this pipeline generates a number of output files, described below. 
+
 |Output                     |Description
 |---------------------------|-----------
 |*.tagstats.txt             |A description of family sizes found in the raw data.
@@ -132,6 +135,7 @@ For each sample, this pipeline generates a number of output files, described bel
         --tagstats
 
 **Inputs:** 
+
 |Input         |Required / default|Description
 |--------------|------------------|------
 |`--infile1`   |Required          |The read 1 file for this sample.  May be gziped.
@@ -145,6 +149,7 @@ For each sample, this pipeline generates a number of output files, described bel
 |`--reduce`    |False             |Optional Flag: Only output reads that will make a final DCS read.  Will only work when the --tagstats option is invoked.   Not recommended
 
 **Outputs:**
+
 |Output|Description
 |--------------------------|--
 |outPrefix.seq1.smi.fq(.gz)|Read 1 file with duplex tags moved to the read name.
@@ -180,6 +185,7 @@ Read indexing is done using samtools index; see samtools website ([http://www.ht
         --rawreads
 
 **Inputs:**
+
 |Input       |Required / default|Description
 |------------|------------------|---------
 |`--input`   |Required          |Path to lobSTR-aligned, paired-end, sorted bam file.
@@ -193,6 +199,7 @@ Read indexing is done using samtools index; see samtools website ([http://www.ht
 |`--debug`   |False             |Use to print out families that don't make consensus to stdout.
 
 **Outputs**
+
 |Output                |Description
 |----------------------|-----------
 |*.lobSTR_RawReads.txt |Raw calls.  This file contains an example read for each allele.
@@ -215,6 +222,7 @@ This step is run once for each of RawReads, SSCSReads, and DCSReads.  The exampl
         -D 2
 
 **Inputs:**
+
 |Input         |Required / default|Description
 |--------------|------------------|-----------
 |-i, --input   |Required          |A file containing tabulated Raw, SSCS, or DCS polyG calls.
@@ -226,6 +234,7 @@ This step is run once for each of RawReads, SSCSReads, and DCSReads.  The exampl
 
 
 **Outputs**
+
 |Output                     |Description
 |---------------------------|-----------
 |*.lobSTR_DCSReads_bad.txt  |DCS calls that failed filtering.
