@@ -31,8 +31,6 @@ set -o pipefail
 set -u
 set -x
 
-source $1
-
 # 1. SET FILE LOCATIONS AND PATHS
 DS_PATH=/Users/RRisques/Desktop/BK/risques/CRISPR-DS-Poly_G
 SAMTOOLS_PATH=samtools
@@ -119,11 +117,11 @@ python3 ${DS_PATH}/consensus_by_alignment_lobSTR.py \
     --minmem ${minMem} \
     --mindiff ${minDiff} \
     --motif ${motif} \
-    --rawreads
+    --rawcalls
 # Outputs:
-#     ${elmt}.lobSTR_RawReads.txt
-#     ${elmt}.lobSTR_SSCSReads.txt
-#     ${elmt}.lobSTR_DCSReads.txt
+#     ${elmt}.lobSTR_RawCalls.txt
+#     ${elmt}.lobSTR_SSCSCalls.txt
+#     ${elmt}.lobSTR_DCSCalls.txt
 #     ${elmt}_lobSTR.tagstats.txt
 echo $((progStep+1)) > .prog_step
 fi
@@ -134,24 +132,24 @@ if [ "${startStep}" -le "${progStep}" ]; then
 # Filter polyG calls
 # Raw
 python3 ${DS_PATH}/filterPolyGCalls.py \
-    -i ${RUN_ID}.lobSTR_RawReads.txt \
-    -p ${RUN_ID}.lobSTR_RawReads \
+    -i ${RUN_ID}.lobSTR_RawCalls.txt \
+    -p ${RUN_ID}.lobSTR_RawCalls \
     -b \
     -m ${motif} \
     -d 2 \
     -D 2
 # SSCS
 python3 ${DS_PATH}/filterPolyGCalls.py \
-    -i ${RUN_ID}.lobSTR_SSCSReads.txt \
-    -p ${RUN_ID}.lobSTR_SSCSReads \
+    -i ${RUN_ID}.lobSTR_SSCSCalls.txt \
+    -p ${RUN_ID}.lobSTR_SSCSCalls \
     -b \
     -m ${motif} \
     -d 2 \
     -D 2
 # DCS
 python3 ${DS_PATH}/filterPolyGCalls.py \
-    -i ${RUN_ID}.lobSTR_DCSReads.txt \
-    -p ${RUN_ID}.lobSTR_DCSReads \
+    -i ${RUN_ID}.lobSTR_DCSCalls.txt \
+    -p ${RUN_ID}.lobSTR_DCSCalls \
     -b \
     -m ${motif} \
     -d 2 \
@@ -171,7 +169,7 @@ while IFS="" read -r myLine || [ -n "$myLine" ]; do
     else
         echo -e "Raw\t${myLine}" >> ${RUN_ID}.lobSTR_summary_stats.txt
     fi
-done < ${RUN_ID}.lobSTR_RawReads_stats.txt
+done < ${RUN_ID}.lobSTR_RawCalls_stats.txt
 
 firstLine=1
 while IFS="" read -r myLine || [ -n "$myLine" ]; do
@@ -180,7 +178,7 @@ while IFS="" read -r myLine || [ -n "$myLine" ]; do
     else
         echo -e "SSCS\t${myLine}" >> ${RUN_ID}.lobSTR_summary_stats.txt
     fi
-done < ${RUN_ID}.lobSTR_SSCSReads_stats.txt
+done < ${RUN_ID}.lobSTR_SSCSCalls_stats.txt
 
 firstLine=1
 while IFS="" read -r myLine || [ -n "$myLine" ]; do
@@ -189,7 +187,7 @@ while IFS="" read -r myLine || [ -n "$myLine" ]; do
     else
         echo -e "DCS\t${myLine}" >> ${RUN_ID}.lobSTR_summary_stats.txt
     fi
-done < ${RUN_ID}.lobSTR_DCSReads_stats.txt
+done < ${RUN_ID}.lobSTR_DCSCalls_stats.txt
 cd ..
 echo $((progStep+1)) > .prog_step
 fi

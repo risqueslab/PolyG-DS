@@ -40,7 +40,7 @@ usage: consensus_by_alignment_lobSTR.2.3.py [-h] --input IN_BAM
                                             --bed IN_BED [--motif MOTIF]
                                             [--minmem MINMEM] 
                                             [--mindiff MIN_DIFF]
-                                            [--rawreads] 
+                                            [--rawcalls] 
                                             [--taglen TAG_LEN] 
                                             --prefix PREFIX
 
@@ -54,7 +54,7 @@ optional arguments:
   --mindiff MIN_DIFF  The frequency difference between first and second 
                       most abundant allelemust be GREATER than this for 
                       a consensus to be called for that tag. [0]
-  --rawreads          Option to have a text file with raw reads printed 
+  --rawcalls          Option to have a text file with raw calls printed 
                       out.
   --taglen TAG_LEN    Length of the duplex tag sequence. [10]
   --prefix PREFIX     Sample name to uniquely identify samples
@@ -146,7 +146,7 @@ def createTagDict(bam, polyG_info, motif, tagLen):
     sys.stderr.write("Going through tags...\n")
     tag_dict = {}
     tag_ctr = 0
-    badReads = 0
+    badRalls = 0
     for polyG in polyG_info:
         # For each polyG, extract those regions from 
         # the bam file
@@ -183,10 +183,10 @@ def createTagDict(bam, polyG_info, motif, tagLen):
                     tag_dict[tag]['POLY_G'].append(polyG.name)
                     tag_dict[tag]['read'].append(read.query_sequence)
             else:
-                badReads += 1
+                badRalls += 1
     sys.stderr.write(f"\n{tag_ctr} reads processed\n"
-                     f"\t{badReads} bad reads\n"
-                     f"\t{tag_ctr - badReads} good reads remaining\n\n"
+                     f"\t{badCalls} bad reads\n"
+                     f"\t{tag_ctr - badRalls} good reads remaining\n\n"
                      )
     return(tag_dict)
 
@@ -282,7 +282,7 @@ def createDCSDict(sscs_dict_input, tag_len):
     
 def determineMajorAllele(one_tag_dict, min_diff):
     '''
-    Input is tag information and returns an 'SSCS' read which
+    Input is tag information and returns an 'SSCS' call which
     takes the most abundant allele for that tag if the difference
     between it and the second most abundant are greater than indicated 
     difference. 
@@ -290,14 +290,14 @@ def determineMajorAllele(one_tag_dict, min_diff):
     alleles = Counter(one_tag_dict['XG'])
     most_common_alleles = alleles.most_common() 
     top_allele = most_common_alleles[0][0]                   
-    top_reads = most_common_alleles[0][1]
+    top_calls = most_common_alleles[0][1]
     if len(most_common_alleles) == 1:
-        second_reads = 0
+        second_calls = 0
     else:
-        second_reads = most_common_alleles[1][1]                   
-    total_reads = top_reads + second_reads                        
-    top_allele_freq = float(top_reads)/total_reads 
-    second_allele_freq = float(second_reads)/total_reads  
+        second_calls = most_common_alleles[1][1]                   
+    total_calls = top_calls + second_calls                        
+    top_allele_freq = float(top_calls)/total_calls 
+    second_allele_freq = float(second_calls)/total_calls  
     diff_freq = top_allele_freq - second_allele_freq
     polyG = one_tag_dict['POLY_G'][one_tag_dict['XG'].index(top_allele)]
     if diff_freq > min_diff:
@@ -340,20 +340,20 @@ def makeAlleleDict(polyG_info, tag_dict, dictType="consensus"):
                     allele_dict[polyG]['TOTAL_READS'] += 1
     return(allele_dict)
 
-def writeOutputFile(ref_dict, prefix, read_type):
+def writeOutputFile(ref_dict, prefix, call_type):
     '''
     Takes in a polyG reference dictionary 
     and write all of the info to an output file.
     '''
-    out_file = open(f"{prefix}.{read_type}Reads.txt", 'w')
+    out_file = open(f"{prefix}.{call_type}Calls.txt", 'w')
     # Write header for file
-    if read_type == "lobSTR_Raw":
+    if call_type == "lobSTR_Raw":
         out_file.write(f"#PolyG\tAllele\tAllele_Length\t"
-                       f"{read_type}_Reads\tAllele_Freq\tXD\tSequence\n"
+                       f"{call_type}_Calls\tAllele_Freq\tXD\tSequence\n"
                        )
     else:
         out_file.write(f"#PolyG\tAllele\tAllele_Length\t"
-                       f"{read_type}_Reads\tAllele_Freq\n"
+                       f"{call_type}_Calls\tAllele_Freq\n"
                        )
     for polyG, alleles in sorted(ref_dict.items()):
         #print(polyG)
@@ -365,7 +365,7 @@ def writeOutputFile(ref_dict, prefix, read_type):
                                    / ref_dict[polyG]['TOTAL_READS']
                                    )
                     rounded_allele_freq = f"{allele_freq:.4f}"
-                    if read_type == "lobSTR_Raw":
+                    if call_type == "lobSTR_Raw":
                         out_file.write(
                             f"{polyG}\t"
                             f"{allele}\t"
@@ -373,7 +373,7 @@ def writeOutputFile(ref_dict, prefix, read_type):
                             f"{ref_dict[polyG][allele]['count']}\t"
                             f"{rounded_allele_freq}\t"
                             f"{ref_dict[polyG][allele]['XD']}\t"
-                            f"{ref_dict[polyG][allele]['read']}\n"
+                            f"{ref_dict[polyG][allele]['call']}\n"
                             )
                     else:
                         out_file.write(
@@ -439,15 +439,15 @@ def main():
         type = float, 
         default = 0,
         help = (f'The frequency difference between first and second '
-                f'most abundant allele must be GREATER than this for a '
-                f'consensus to be called for that tag. [0]'
+                f'most abundant allele must be GREATER than this value for a '
+                f'consensus to be called for that family. [0]'
                 )
         )
     parser.add_argument(
-        '--rawreads', 
-        dest = 'raw_reads', 
+        '--rawcalls', 
+        dest = 'raw_calls', 
         action = "store_true",
-        help = 'Option to have a text file with raw reads printed out. '
+        help = 'Option to have a text file with raw calls printed out. '
         )
     parser.add_argument(
         '--taglen', 
@@ -485,7 +485,7 @@ def main():
                                          )
     dcs_dict = createDCSDict(sscs_dict, o.tag_len)
     # write output files
-    if o.raw_reads:
+    if o.raw_calls:
         raw_allele_dict = makeAlleleDict(polyG_info, 
                                          tag_dict, 
                                          dictType = "raw"
@@ -497,11 +497,11 @@ def main():
     writeOutputFile(dcs_allele_dict, o.prefix, "lobSTR_DCS")
     # write tagstats file
     tagstatsOut = open(f"{o.prefix}_lobSTR_tagstats.txt", 'w')
-    totalReads = sum([x * tagstats[x] for x in tagstats])
+    totalCalls = sum([x * tagstats[x] for x in tagstats])
     for x in sorted(tagstats.keys()):
         tagstatsOut.write(f"{x}\t"
                           f"{x * tagstats[x]}\t"
-                          f"{x * tagstats[x]/totalReads}\n"
+                          f"{x * tagstats[x]/totalCalls}\n"
                           )
     tagstatsOut.close()
     

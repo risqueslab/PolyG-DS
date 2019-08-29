@@ -216,14 +216,14 @@ def main():
         dest = 'taglen', 
         type = int, 
         default = 12,
-        help = 'Length in bases of the duplex tag sequence.[12]'
+        help = 'Length in bases of the tag sequences.[12]'
         )
     parser.add_argument(
         '--spacerlen', 
         dest = 'spclen', 
         type = int, 
         default = 5,
-        help = (f'Length in bases of the spacer sequence between duplex'
+        help = (f'Length in bases of the spacer sequence between the'
                 f' tag and the start of target DNA. [5]'
                 )
         )

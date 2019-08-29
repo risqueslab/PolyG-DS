@@ -83,7 +83,8 @@ def main():
         dest = "badDiff", 
         default = 2, 
         help = (f"The number of bases that are neither the motif nor "
-                f"the reverse compliment of the motif.  "
+                f"the reverse compliment of the motif that you are willing "
+                f"to tolerate.  "
                 )
         )
     parser.add_argument(
