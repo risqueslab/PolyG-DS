@@ -2,80 +2,201 @@
 
 
 # DS_polyG_lobSTR.sh
+# Version 0.3.0
 # 
 # By Dana Nachmanson (1)
 # (1) Department of Pathology, University of Washington School of Medicine, Seattle, WA 98195 
 # July 2017
+# Modified by Brendan Kohrn (1)
 # 
 # Creating single stranded and double stranded consensus
 # based on lobSTR alignment of polyG/polyC regions. Can be used 
 # for other repeats and repeat units. 
 # 
-# FastQ --> TagtoHeader.py -> lobSTR alignment -> consensus_by_alignment_lobSTR2.py
+# FastQ --> TagtoHeader.py -> lobSTR alignment -> consensus_by_alignment_lobSTR.py
 # 
 # ---------------------------------------------------------------------------------
-# Written for Python 2.7
+# Written for Python 3
 # Required modules: Pysam, samtools, lobSTR
 # 
 # Inputs:
 #     1: Raw paired-end fastQ files with tag information in the first section of the read
 #     2: A bed file with the positions of loci of interest
-#     3: A fasta reference genome
-
-
-clear
+#     3: A fasta reference genome indexed for lobSTR 
+#       (can be downloaded from http://lobstr.teamerlich.org/download.html)
 
 # Stop on any error inside or outside pipeline or on an unassigned variable.
 set -e
 set -o pipefail
 set -u
+set -x
 
-# 1. SET RUN VARIABLES
-minMem=3            # Minimum number of reads to reach consensus
-minDiff=0			# The frequency difference between first and second most abundant allele   
-                    # must be GREATER than this for a consensus to be called for that tag.
-refDiff=10			# Largest unit difference between reference allele and actual allele.
-motif='G'			# STR repeating unit
-tagLen=10           # Adapter sequence length
-spacerLen=1         # Spacer sequence length (adaptor end, begin target gene)
+# 1. SET FILE LOCATIONS AND PATHS
+DS_PATH=/Users/RRisques/Desktop/BK/risques/CRISPR-DS-Poly_G
+SAMTOOLS_PATH=samtools
+lobSTR_PATH=lobSTR
 
-# 2. SET FILE LOCATIONS AND PATHS
-DS_PATH=/Users/RRisques/Desktop/Duplex_Sequencing/Programs/PolyG
-ALIGN_REF=/Users/RRisques/Desktop/Duplex_Sequencing/Reference/PolyG/lobSTR_ref/hg19_v3.0.2/lobstr_v3.0.2_hg19_ref/lobSTR_
-REGION_BED=/Users/RRisques/Desktop/Duplex_Sequencing/Reference/PolyG/PolyG_20_sites.bed # Bed file with genomic region
+source $1
 
-# 3. SET SAMPLES TO ANALYZE:
-# Folder names separated by spaces containing R1 and R2 Fastq.gz files named: samplename.seq1.fastq.gz and samplename.seq2.fastq.gz
-# NOTE: This script can use compressed Fastq files, no need to unzip files before running this script
+if [ ${startStep} -eq 0 ]; then
+    if [ -e ".prog_step" ]; then 
+        startStep=$(cat .prog_step)
+    else
+        echo 1 > .prog_step
+        startStep=1
+    fi
+fi
 
-folderList='s3 s4 s5 s6 s11 s66 7 8 9 '
+progStep=1
 
-# 4. RUN SCRIPT:
-# From the terminal-
-# >> cd into the directory containing your SAMPLE FOLDERS and a copy of this script
-# >> bash -x DS_polyG_lobSTR.sh > DS_polyG_lobSTR.txt
+if [ "${startStep}" -le "${progStep}" ]; then
+# Remove tag from read and put into header
+python3 ${DS_PATH}/tag_to_header.py \
+    --infile1 ${SEQ1} \
+    --infile2 ${SEQ2} \
+    --taglen ${tagLen} \
+    --spacerlen ${spacerLen} \
+    --outprefix ${RUN_ID} \
+    --tagstats 
+# Outputs:
+#     ${elmt}.seq1.smi.fq.gz
+#     ${elmt}.seq2.smi.fq.gz
+#     ${elmt}.tagstats.txt
+echo $((progStep+1)) > .prog_step
+fi
 
-for elmt in $folderList
-do	
-	cd ${elmt}
-	
-	#Remove tag from read and put into header
-    python /Users/RRisques/Desktop/Duplex_Sequencing/Programs/tag_to_header.py --infile1 ${elmt}.seq1.fastq.gz --infile2 ${elmt}.seq2.fastq.gz \
-    --taglen $tagLen --spacerlen $spacerLen --outprefix ${elmt} --tagstats 
-  	
-	#Align fastQ file with lobSTR
-	#Extra parameters can be added in this command and usage found here: http://lobstr.teamerlich.org/usage.html 
- 	lobSTR --p1 ${elmt}.seq1.smi.fq.gz --p2 ${elmt}.seq2.smi.fq.gz -q --rg-sample ${elmt} --index-prefix $ALIGN_REF -o ${elmt}.smi --rg-lib spike_in --gzip
- 	
-	#Sort bam file
- 	samtools sort ${elmt}.smi.aligned.bam -o ${elmt}.smi.aligned.sorted.bam
+progStep=$((progStep+1))
 
-	#Index bam file
- 	samtools index ${elmt}.smi.aligned.sorted.bam 
-	
-	# Perform consensus of lobSTR allele calls
-	python $DS_PATH/consensus_by_alignment_lobSTR.2.0.py --input ${elmt}.smi.aligned.sorted.bam --bed $REGION_BED --prefix ${elmt} \
-	--taglen $tagLen --minmem $minMem --mindiff $minDiff --refdiff $refDiff --motif $motif
+if [ "${startStep}" -le "${progStep}" ]; then
+# Align fastQ file with lobSTR
+# Extra parameters can be added in this command and usage found 
+#   here: http://lobstr.teamerlich.org/usage.html 
+${lobSTR_PATH} \
+    --p1 ${RUN_ID}.seq1.smi.fq.gz \
+    --p2 ${RUN_ID}.seq2.smi.fq.gz \
+    -q \
+    --rg-sample ${RUN_ID} \
+    --index-prefix ${REF_PATH} \
+    -o ${RUN_ID}.smi \
+    --rg-lib spike_in \
+    --gzip \
+    --multi \
+    --mismatch 3
+# Output: ${elmt}.smi.aligned.bam
+echo $((progStep+1)) > .prog_step
+fi
 
-	cd ..
-done
+progStep=$((progStep+1))
+
+if [ "${startStep}" -le "${progStep}" ]; then
+# Sort bam file
+${SAMTOOLS_PATH} sort ${RUN_ID}.smi.aligned.bam \
+    -o ${RUN_ID}.smi.aligned.sorted.bam
+# Output: ${elmt}.smi.aligned.sorted.bam
+echo $((progStep+1)) > .prog_step
+fi
+
+progStep=$((progStep+1))
+
+if [ "${startStep}" -le "${progStep}" ]; then
+# Index bam file
+${SAMTOOLS_PATH} index ${RUN_ID}.smi.aligned.sorted.bam 
+# Output: ${elmt}.smi.aligned.sorted.bai
+echo $((progStep+1)) > .prog_step
+fi
+
+progStep=$((progStep+1))
+
+if [ "${startStep}" -le "${progStep}" ]; then
+# Perform consensus of buffered lobSTR allele calls
+python3 ${DS_PATH}/consensus_by_alignment_lobSTR.py \
+    --input ${RUN_ID}.smi.aligned.sorted.bam \
+    --bed ${BED_PATH} \
+    --prefix ${RUN_ID} \
+    --taglen ${tagLen} \
+    --minmem ${minMem} \
+    --mindiff ${minDiff} \
+    --motif ${motif} \
+    --rawcalls
+# Outputs:
+#     ${elmt}.lobSTR_RawCalls.txt
+#     ${elmt}.lobSTR_SSCSCalls.txt
+#     ${elmt}.lobSTR_DCSCalls.txt
+#     ${elmt}_lobSTR.tagstats.txt
+echo $((progStep+1)) > .prog_step
+fi
+
+progStep=$((progStep+1))
+
+if [ "${startStep}" -le "${progStep}" ]; then
+# Filter polyG calls
+# Raw
+python3 ${DS_PATH}/filterPolyGCalls.py \
+    -i ${RUN_ID}.lobSTR_RawCalls.txt \
+    -p ${RUN_ID}.lobSTR_RawCalls \
+    -b \
+    -m ${motif} \
+    -d 2 \
+    -D 2
+# SSCS
+python3 ${DS_PATH}/filterPolyGCalls.py \
+    -i ${RUN_ID}.lobSTR_SSCSCalls.txt \
+    -p ${RUN_ID}.lobSTR_SSCSCalls \
+    -b \
+    -m ${motif} \
+    -d 2 \
+    -D 2
+# DCS
+python3 ${DS_PATH}/filterPolyGCalls.py \
+    -i ${RUN_ID}.lobSTR_DCSCalls.txt \
+    -p ${RUN_ID}.lobSTR_DCSCalls \
+    -b \
+    -m ${motif} \
+    -d 2 \
+    -D 2
+echo $((progStep+1)) > .prog_step
+fi
+
+progStep=$((progStep+1))
+
+if [ "${startStep}" -le "${progStep}" ]; then
+# Combine statistics from each filter
+echo -e "#Call Type\tPolyG\tGood Calls\tTotal Calls\t% Good Calls\tGood Alleles\tTotal Alleles\t% Good Alleles" > ${RUN_ID}.lobSTR_summary_stats.txt
+firstLine=1
+while IFS="" read -r myLine || [ -n "$myLine" ]; do
+    if (( "${firstLine}" == "1" )); then
+        firstLine=0
+    else
+        echo -e "Raw\t${myLine}" >> ${RUN_ID}.lobSTR_summary_stats.txt
+    fi
+done < ${RUN_ID}.lobSTR_RawCalls_stats.txt
+
+firstLine=1
+while IFS="" read -r myLine || [ -n "$myLine" ]; do
+    if (( "${firstLine}" == "1" )); then
+        firstLine=0
+    else
+        echo -e "SSCS\t${myLine}" >> ${RUN_ID}.lobSTR_summary_stats.txt
+    fi
+done < ${RUN_ID}.lobSTR_SSCSCalls_stats.txt
+
+firstLine=1
+while IFS="" read -r myLine || [ -n "$myLine" ]; do
+    if (( "${firstLine}" == "1" )); then
+        firstLine=0
+    else
+        echo -e "DCS\t${myLine}" >> ${RUN_ID}.lobSTR_summary_stats.txt
+    fi
+done < ${RUN_ID}.lobSTR_DCSCalls_stats.txt
+cd ..
+echo $((progStep+1)) > .prog_step
+fi
+
+progStep=$((progStep+1))
+
+if [ "${cleanup}" = "TRUE" ]; then
+rm ${RUN_ID}*.smi.fq.gz
+rm ${RUN_ID}.smi.aligned.ba*
+rm ${RUN_ID}.smi.aligned.sorted.ba*
+fi
+
