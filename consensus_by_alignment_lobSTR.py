@@ -146,7 +146,7 @@ def createTagDict(bam, polyG_info, motif, tagLen):
     sys.stderr.write("Going through tags...\n")
     tag_dict = {}
     tag_ctr = 0
-    badRalls = 0
+    badCalls = 0
     for polyG in polyG_info:
         # For each polyG, extract those regions from 
         # the bam file
@@ -183,10 +183,10 @@ def createTagDict(bam, polyG_info, motif, tagLen):
                     tag_dict[tag]['POLY_G'].append(polyG.name)
                     tag_dict[tag]['read'].append(read.query_sequence)
             else:
-                badRalls += 1
+                badCalls += 1
     sys.stderr.write(f"\n{tag_ctr} reads processed\n"
                      f"\t{badCalls} bad reads\n"
-                     f"\t{tag_ctr - badRalls} good reads remaining\n\n"
+                     f"\t{tag_ctr - badCalls} good reads remaining\n\n"
                      )
     return(tag_dict)
 
@@ -373,7 +373,7 @@ def writeOutputFile(ref_dict, prefix, call_type):
                             f"{ref_dict[polyG][allele]['count']}\t"
                             f"{rounded_allele_freq}\t"
                             f"{ref_dict[polyG][allele]['XD']}\t"
-                            f"{ref_dict[polyG][allele]['call']}\n"
+                            f"{ref_dict[polyG][allele]['read']}\n"
                             )
                     else:
                         out_file.write(
