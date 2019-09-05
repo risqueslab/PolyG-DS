@@ -2,13 +2,7 @@
 
 **CRISPR-DS with PolyG data processing pipeline**
 
-By Dana Nachmanson (1)
-
-July 2017
-
-Modified by Brendan Kohrn (1)
-
-May 2019
+By Dana Nachmanson (1), July 2017; Modified by Brendan Kohrn (1), May 2019
 
 (1) Department of Pathology, University of Washington School of Medicine,
  Seattle, WA 98195 
