@@ -7,37 +7,6 @@
 #     Medicine, Seattle, WA 98195
 # March 24, 2014
 #
-"""
-  BERKELEY SOFTWARE DISTRIBUTION LICENSE
-Copyright (c) 2016, Lawrence A. Loeb, Scott R Kennedy University of Washington
-All rights reserved.
-
-Redistribution and use in source and binary forms, with or without 
-modification, are permitted provided that the following conditions are met:
-
-1. Redistributions of source code must retain the above copyright notice, 
-this list of conditions and the following disclaimer.
-
-2. Redistributions in binary form must reproduce the above copyright notice, 
-this list of conditions and the following disclaimer in the documentation and/or 
-other materials provided with the distribution.
-
-3. Neither the name of the copyright holder nor the names of its contributors 
-may be used to endorse or promote products derived from this software without 
-specific prior written permission.
-
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" 
-AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE 
-IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE 
-ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE 
-LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL 
-DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR 
-SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER 
-CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, 
-OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE 
-OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-"""
-
 # Isolate duplex tags, move them from within the sequenced read to the 
 # header region, and remove the spacer region.
 #
@@ -153,13 +122,15 @@ def fastq_general_iterator(read1_fastq, read2_fastq):
     #raise StopIteration
 
 
-def tag_extract_fxn(read_seq, blen):
+def tag_extract_fxn(read_seq, blen, slen, llen):
     # This is the function that extracts the UID tags from both the
     # forward and reverse read.  Assigns read1 the sequence from some
     # position to the end, then read2 from some position to the end,
     # then assigns tag1 from the 5'-end to length of the UID tag for
     # read1 and then read 2.
-    return(read_seq[0][:blen], read_seq[1][:blen])
+    return (
+        f"{read_seq[0][:blen]}{read_seq[0][blen+slen:blen+slen+llen]}", 
+        f"{read_seq[1][:blen]}{read_seq[1][blen+slen:blen+slen+llen]}")
 
 
 def hdr_rename_fxn(read_title, read1_tag, read2_tag):
@@ -259,6 +230,16 @@ def main():
                 )
         )
     parser.add_argument(
+        "--loclen", 
+        dest = 'loclen', 
+        type = int, 
+        default = 0, 
+        action = "store",
+        help = (f"Number of base pairs to add to barcode for location "
+                f"specificity.  Bases are not removed from read.  [0]"
+                )
+        )
+    parser.add_argument(
         '--readout', 
         dest = 'readout', 
         type = int, 
@@ -334,7 +315,7 @@ def main():
             nospacer += 1
         else:
             tag1, tag2 = tag_extract_fxn((read1_seq, read2_seq), 
-                                         o.taglen
+                                         o.taglen, o.spclen, o.loclen
                                          )
 
             if (
