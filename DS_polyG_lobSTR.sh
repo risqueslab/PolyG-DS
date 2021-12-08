@@ -2,7 +2,7 @@
 
 
 # DS_polyG_lobSTR.sh
-# Version 0.3.0
+# Version 0.4.0
 # 
 # By Dana Nachmanson (1)
 # (1) Department of Pathology, University of Washington School of Medicine, Seattle, WA 98195 
@@ -16,9 +16,6 @@
 # FastQ --> TagtoHeader.py -> lobSTR alignment -> consensus_by_alignment_lobSTR.py
 # 
 # ---------------------------------------------------------------------------------
-# Written for Python 3
-# Required modules: Pysam, samtools, lobSTR
-# 
 # Inputs:
 #     1: Raw paired-end fastQ files with tag information in the first section of the read
 #     2: A bed file with the positions of loci of interest
@@ -56,6 +53,7 @@ python3 ${DS_PATH}/tag_to_header.py \
     --infile2 ${SEQ2} \
     --taglen ${tagLen} \
     --spacerlen ${spacerLen} \
+    --loclen ${locLen} \
     --outprefix ${RUN_ID} \
     --tagstats 
 # Outputs:
@@ -113,7 +111,7 @@ python3 ${DS_PATH}/consensus_by_alignment_lobSTR.py \
     --input ${RUN_ID}.smi.aligned.sorted.bam \
     --bed ${BED_PATH} \
     --prefix ${RUN_ID} \
-    --taglen ${tagLen} \
+    --taglen $((tagLen + locLen)) \
     --minmem ${minMem} \
     --mindiff ${minDiff} \
     --motif ${motif} \

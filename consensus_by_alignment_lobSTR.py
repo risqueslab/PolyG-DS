@@ -1,10 +1,10 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
 ***********
 
 consensus_by_alignment_lobSTR.2.3.py
-Version 0.3.0
+Version 0.4.0
 
 By Dana Nachmanson (1) 
 (1) Department of Pathology, University of Washington School of 
@@ -22,7 +22,6 @@ FastQ
 -> consensus_by_alignment_lobSTR.2.4_get_seqs.py
 
 ---------------------------------------------------------------------------------
-Written for Python 2.7
 Required modules: Pysam
 
 Inputs:
@@ -103,8 +102,6 @@ class TagError(Error):
                             )
         sys.stderr.write(self.message)
 
-
-
 class PolyG:
     """This class holds information about a particular PolyG in a manner
     that makes it easy to use later.  It takes a line from a bed file
@@ -137,60 +134,7 @@ def get_polyG_info (inBedFile):
         polyG_info.append(PolyG(line, lineNum))
     return(polyG_info)
 
-def createTagDict(bam, polyG_info, motif, tagLen):
-    '''
-    Parses through a bam file and retains information on reads 
-    with tags that have usable polyNt info in the regions 
-    specified in the bed file.
-    '''
-    sys.stderr.write("Going through tags...\n")
-    tag_dict = {}
-    tag_ctr = 0
-    badCalls = 0
-    for polyG in polyG_info:
-        # For each polyG, extract those regions from 
-        # the bam file
-        for read in bam.fetch(polyG.chrom,  
-                              polyG.start, 
-                              polyG.end 
-                              ):
-            tag_ctr += 1
-            if tag_ctr % 10000 == 0:
-                sys.stderr.write(f"{tag_ctr} reads processed.....\n")
-            read_id, tag_info = read.query_name.split('|')
-            tag = str(tag_info.split('/')[0])
-            if len(tag) != 2 * tagLen:
-                raise TagError(tag, tagLen)
-            # This checks whether the read spanned the PolyNT 
-            # and has a genotype.
-            if (read.has_tag('XD') and 
-                    (read.get_tag('XR') == motif or 
-                    read.get_tag('XR') == revCompl(motif))
-                    ):
-                if tag not in tag_dict.keys():
-                    tag_dict[tag] = {}
-                    tag_dict[tag]['READ_ID'] = []
-                    tag_dict[tag]['XD'] = []
-                    tag_dict[tag]['XG'] = []
-                    tag_dict[tag]['POLY_G'] = []
-                    tag_dict[tag]['read'] = []
-                if read_id not in tag_dict[tag]['READ_ID']:
-                    tag_dict[tag]['READ_ID'].append(read_id)
-                    tag_dict[tag]['XD'].append(
-                        polyG.ref_len + read.get_tag('XD')
-                        )
-                    tag_dict[tag]['XG'].append(read.get_tag('XG'))
-                    tag_dict[tag]['POLY_G'].append(polyG.name)
-                    tag_dict[tag]['read'].append(read.query_sequence)
-            else:
-                badCalls += 1
-    sys.stderr.write(f"\n{tag_ctr} reads processed\n"
-                     f"\t{badCalls} bad reads\n"
-                     f"\t{tag_ctr - badCalls} good reads remaining\n\n"
-                     )
-    return(tag_dict)
-
-def createSSCSDict(tag_dict, minmem, min_diff, debug):
+def createSSCSDict(tag_dict,  polyG, minmem, min_diff, debug,):
     '''
     Input is a dictionary of tags and raw reads. 
     Returns a dictionary of consensus tags.
@@ -199,14 +143,12 @@ def createSSCSDict(tag_dict, minmem, min_diff, debug):
     sscs_dict = {}
     too_few_reads = 0
     no_consensus = 0
-    familySizeDict = {}
+    familySizeDict = Counter()
+    sscs_dict = {}
     for tag in tag_dict.keys():
         # Check that tag has minimum amount of reads
         num_reads = len(tag_dict[tag]['READ_ID'])
-        if num_reads in familySizeDict:
-            familySizeDict[num_reads] += 1
-        else:
-            familySizeDict[num_reads] = 1.
+        familySizeDict[num_reads] += 1
         if num_reads >= minmem: 
             sscs_dict[tag] = determineMajorAllele(tag_dict[tag], min_diff)
             if sscs_dict[tag] == None:
@@ -224,15 +166,6 @@ def createSSCSDict(tag_dict, minmem, min_diff, debug):
                         print(entry)
         else:
             too_few_reads += 1 
-    sys.stderr.write(f"{len(tag_dict.keys())} total tags processed.\n"
-                     f"\t{too_few_reads} tags were lost because they "
-                     f"had too few reads\n"
-                     f"\t{no_consensus} tags were lost because they "
-                     f"could not find a major allele\n"
-                     f"\t{len(sscs_dict.keys())} SSCS tags left.\n"
-                     f"\tNow only {len(sscs_dict.keys())/2} DCS tags "
-                     f"are possible.\n\n"
-                     )   
     return(sscs_dict, familySizeDict)
     
 def createDCSDict(sscs_dict_input, tag_len):
@@ -247,9 +180,10 @@ def createDCSDict(sscs_dict_input, tag_len):
     num_mismatch = 0
     rev_tag_not_there = 0
     how_many_nones = 0
+    tags_used = []
     for tag in sscs_dict_input.keys():
         rev_tag = reverse(tag, tag_len)
-        if str(rev_tag) in sscs_dict_input.keys():
+        if str(rev_tag) in sscs_dict_input.keys() and str(rev_tag) not in tags_used:
             # Makes sure that both tags have a major allele
             if sscs_dict_input[tag] and sscs_dict_input[rev_tag]:
                 # Check if both tags have same major allele and mapped to sample PolyG
@@ -271,6 +205,7 @@ def createDCSDict(sscs_dict_input, tag_len):
                 how_many_nones += 1
         else:
             rev_tag_not_there += 1
+        tags_used.append(tag, rev_tag)
     sys.stderr.write(f"{num_mismatch} tags did not agree.\n"
                      f"\t{how_many_nones} tags equal None.\n"
                      f"\t{rev_tag_not_there} tags could not find their "
@@ -305,9 +240,9 @@ def determineMajorAllele(one_tag_dict, min_diff):
     else:
         return(None)
 
-def makeAlleleDict(polyG_info, tag_dict, dictType="consensus"):
+def makeAlleleDict(in_polyG, tag_dict, dictType="consensus"):
     '''Counts the number of reads with each allele for each polyG'''
-    allele_dict = {x.name:{"TOTAL_READS": 0} for x in polyG_info}
+    allele_dict = {in_polyG.name:{"TOTAL_READS": 0}}
     if dictType == "raw":
         for tag in tag_dict:
             for readIter in range(len(tag_dict[tag]["POLY_G"])):
@@ -472,28 +407,92 @@ def main():
         )
     o = parser.parse_args()
     
+    # get polyG info
     polyG_info = get_polyG_info(o.in_bed)
-    tag_dict = createTagDict(pysam.AlignmentFile(o.in_bam, 'rb'), 
-                             polyG_info, 
-                             o.motif,
-                             o.tag_len
-                             )
-    sscs_dict, tagstats = createSSCSDict(tag_dict, 
-                                         o.minmem, 
-                                         o.min_diff, 
-                                         o.debug
-                                         )
-    dcs_dict = createDCSDict(sscs_dict, o.tag_len)
+
+    # open input bam file:
+    in_bam = pysam.AlignmentFile(o.in_bam, 'rb')
+
+    # Initialize counters:
+    tag_ctr = 0
+    badCalls = 0
+
+    # initialize output data structures:
+    raw_allele_dict = {}
+    sscs_allele_dict = {}
+    dcs_allele_dict = {}
+    tagstats = Counter()
+    # Start iterating over polyGs: 
+    for polyG in polyG_info:
+        tag_dict = {}
+        # For each polyG, extract those regions from 
+        # the bam file
+        for read in in_bam.fetch(polyG.chrom,
+                                 polyG.start,
+                                 polyG.end):
+            tag_ctr += 1
+            if tag_ctr % 10000 == 0:
+                sys.stderr.write(f"{tag_ctr} reads processed.....\n")
+            read_id, tag_info = read.query_name.split('|')
+            tag = str(tag_info.split('/')[0])
+            if len(tag) != 2 * o.tag_len:
+                raise TagError(tag, o.tag_len)
+            # This checks whether the read spanned the PolyNT 
+            # and has a genotype.
+            if (read.has_tag('XD') and 
+                    (read.get_tag('XR') == o.motif or 
+                    read.get_tag('XR') == revCompl(o.motif))
+                    ):
+                if tag not in tag_dict.keys():
+                    tag_dict[tag] = {}
+                    tag_dict[tag]['READ_ID'] = []
+                    tag_dict[tag]['XD'] = []
+                    tag_dict[tag]['XG'] = []
+                    tag_dict[tag]['POLY_G'] = []
+                    tag_dict[tag]['read'] = []
+                if read_id not in tag_dict[tag]['READ_ID']:
+                    tag_dict[tag]['READ_ID'].append(read_id)
+                    tag_dict[tag]['XD'].append(
+                        polyG.ref_len + read.get_tag('XD')
+                        )
+                    tag_dict[tag]['XG'].append(read.get_tag('XG'))
+                    tag_dict[tag]['POLY_G'].append(polyG.name)
+                    tag_dict[tag]['read'].append(read.query_sequence)
+            else:
+                badCalls += 1
+        sys.stderr.write(f"{polyG}\n"
+                         f"\t{tag_ctr} reads processed\n"
+                         f"\t\t{badCalls} bad reads\n"
+                         f"\t\t{tag_ctr - badCalls} good reads remaining\n"
+                         )
+        # Prepare raw output file, if requested
+        if o.raw_calls:
+            raw_allele_dict.update(makeAlleleDict(polyG, 
+                                                  tag_dict, 
+                                                  dictType = "raw"
+                                                  ))
+
+        # Make SSCS
+        sscs_output = createSSCSDict(tag_dict, polyG, 
+                                     o.minmem, 
+                                     o.min_diff, 
+                                     o.debug
+                                     )
+        sscs_dict = sscs_output[0]
+        # prep SSCS output
+        sscs_allele_dict.update(makeAlleleDict(polyG, sscs_dict))
+        # prep tagstats output
+        tagstats = tagstats + sscs_output[1]
+
+        # Make DCS
+        dcs_dict = createDCSDict(sscs_dict, o.tag_len)
+        # Prep output from DCS dictionary
+        dcs_allele_dict.update(makeAlleleDict(polyG, dcs_dict))
+
     # write output files
     if o.raw_calls:
-        raw_allele_dict = makeAlleleDict(polyG_info, 
-                                         tag_dict, 
-                                         dictType = "raw"
-                                         )
         writeOutputFile(raw_allele_dict, o.prefix, "lobSTR_Raw")
-    sscs_allele_dict = makeAlleleDict(polyG_info, sscs_dict)
     writeOutputFile(sscs_allele_dict, o.prefix, "lobSTR_SSCS")
-    dcs_allele_dict = makeAlleleDict(polyG_info, dcs_dict)
     writeOutputFile(dcs_allele_dict, o.prefix, "lobSTR_DCS")
     # write tagstats file
     tagstatsOut = open(f"{o.prefix}_lobSTR_tagstats.txt", 'w')
