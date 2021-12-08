@@ -205,7 +205,7 @@ def createDCSDict(sscs_dict_input, tag_len):
                 how_many_nones += 1
         else:
             rev_tag_not_there += 1
-        tags_used.append(tag, rev_tag)
+        tags_used.extend([tag, rev_tag])
     sys.stderr.write(f"{num_mismatch} tags did not agree.\n"
                      f"\t{how_many_nones} tags equal None.\n"
                      f"\t{rev_tag_not_there} tags could not find their "
